@@ -21,7 +21,7 @@
         KB - Килобайты (1024       байта)
         MB - Мегабайты (1048576    байт )
         GB - Гигабайты (1073741824 байта)
-    
+
     -v | --verbose  подробный вывод
     -n | --nocopy   не копировать файл
     -o | --output   копировать файл по указанному пути
@@ -36,17 +36,12 @@ import shutil
 import sys
 
 
-TARGET_FILE_NOT_FOUND           = 1
-TARGET_FILE_IS_A_DIR            = 2
-TARGET_FILE_IS_A_SYMLINK        = 3
-CANNOT_COPY                     = 4
+TARGET_FILE_NOT_FOUND = 1
+TARGET_FILE_IS_A_DIR = 2
+TARGET_FILE_IS_A_SYMLINK = 3
+CANNOT_COPY = 4
 
-UNITS = {
-    'B':  1,
-    'KB': 1024,
-    'MB': 1048576,
-    'GB': 1073741824
-}
+UNITS = {"B": 1, "KB": 1024, "MB": 1048576, "GB": 1073741824}
 
 
 def parse_args() -> argparse.Namespace:
@@ -55,33 +50,20 @@ def parse_args() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser(
         pathlib.Path(__file__).name,
-        usage='purge.py <target> <size> [options...]',
-        description='purges and copies file if size of the file is greater than specified one'
+        usage="purge.py <target> <size> [options...]",
+        description="purges and copies file if size of the file is greater than specified one",
     )
-    parser.add_argument('target', type=pathlib.Path, help='target file')
-    parser.add_argument('size', type=int, help='expected size of the file')
+    parser.add_argument("target", type=pathlib.Path, help="target file")
+    parser.add_argument("size", type=int, help="expected size of the file")
     parser.add_argument(
-        '-u', '--unit',
-        choices=('B', 'KB', 'MB', 'GB'),
-        default='B',
-        help='size unit'    
+        "-u", "--unit", choices=("B", "KB", "MB", "GB"), default="B", help="size unit"
     )
+    parser.add_argument("-v", "--verbose", action="store_true", help="verbose mode")
+    parser.add_argument("-n", "--nocopy", action="store_true", help="prohibit coping")
     parser.add_argument(
-        '-v', '--verbose',
-        action='store_true',
-        help='verbose mode'
+        "-o", "--output", type=pathlib.Path, help="specifies the output file name"
     )
-    parser.add_argument(
-        '-n', '--nocopy',
-        action='store_true',
-        help='prohibit coping'
-    )
-    parser.add_argument(
-        '-o', '--output',
-        type=pathlib.Path,
-        help='specifies the output file name' 
-    )
-    
+
     return parser.parse_args()
 
 
@@ -89,17 +71,11 @@ def setup_logger(verbosity: bool) -> None:
     """setup_logger()
     настраивает логгер
     """
-    format = '%(message)s'
+    format = "%(message)s"
     level = logging.INFO if verbosity else logging.ERROR
-    handlers = (
-        logging.StreamHandler(stream=sys.stderr),
-    )
+    handlers = (logging.StreamHandler(stream=sys.stderr),)
 
-    logging.basicConfig(
-        format=format,
-        level=level,
-        handlers=handlers
-    )
+    logging.basicConfig(format=format, level=level, handlers=handlers)
 
 
 def convert_to_bytes(size: int, unit: str) -> int:
@@ -114,23 +90,23 @@ def ask_rewrite_or_rename(destination: pathlib.Path) -> pathlib.Path | None:
     """ask_rewrite_or_rename()
     Спрашивает пользователя перезаписать ли файл
     или предлагает ввести новое название, после чего
-    возвращает итоговый путь к файлу или ничто, если 
+    возвращает итоговый путь к файлу или ничто, если
     необходимо завершить исполнение скрипта
     """
 
     ofile = destination
-    options = ('yes', 'no')
-    answer = ''
+    options = ("yes", "no")
+    answer = ""
 
     while answer not in options:
         print(f'? file "{destination}" already exists. Rewrite? [yes/no]')
-        answer = input('> ').strip()
-    
-    if answer == 'no':
-        print('? enter new output file name or leave empty to cancel.')
-        ofile = input('> ').strip()
-        if ofile == '':
-            return None        
+        answer = input("> ").strip()
+
+    if answer == "no":
+        print("? enter new output file name or leave empty to cancel.")
+        ofile = input("> ").strip()
+        if ofile == "":
+            return None
         ofile = pathlib.Path(ofile)
 
     return ofile
@@ -156,11 +132,11 @@ def copy(target: pathlib.Path, destination: pathlib.Path) -> None:
         new_destination = ask_rewrite_or_rename(destination)
 
         if new_destination is None:
-            logging.info('skip coping')
+            logging.info("skip coping")
             return
-        
+
         destination = new_destination
-    
+
     try:
         shutil.copy(target, destination)
         logging.info(f'"{target}" copied to "{destination}"')
@@ -197,21 +173,21 @@ def generate_destination_pathfile(target: pathlib.Path) -> pathlib.Path:
         1. название файла + _copy{n} + расширение файла, где n - номер файла копии. Отсчет
         начинается с единицы.
         2. если файл с таким названием существует, прибавляем к номеру единицу
-    
+
     алгоритм повторяется пока не будет найден пустующий номер.
     """
 
     base = target.stem
-    ext  = target.suffix
+    ext = target.suffix
     n = 1
-    gen_name = lambda: pathlib.Path(base + f'_copy{n}' + ext)
+    gen_name = lambda: pathlib.Path(base + f"_copy{n}" + ext)
 
     destination = gen_name()
     while destination.exists():
         n += 1
         destination = gen_name()
-    
-    logging.info(f'generated destination path: {destination}')
+
+    logging.info(f"generated destination path: {destination}")
     return destination
 
 
@@ -220,34 +196,39 @@ def main(
     size: int,
     unit: str,
     nocopy: bool,
-    output: pathlib.Path | None
+    output: pathlib.Path | None,
 ) -> None:
-    
+
     validate_target(target)
-    
+
     actual_size = target.stat().st_size
     expected_size = convert_to_bytes(size, unit)
-    
-    if actual_size < expected_size:
-        logging.info('no actions required')
-        sys.exit(0)
-    
-    destination = None
-    if not nocopy or output is not None:
-        if output is None:
-            destination = generate_destination_pathfile(target)
-        else:
-            destination = output
 
+    if actual_size < expected_size:
+        logging.info("no actions required")
+        sys.exit(0)
+
+    destination = None
+
+    # Установить файл для копирования
+    if output is not None:
+        destination = output
+    elif not nocopy:
+        destination = generate_destination_pathfile(target)
+
+    # Копировать
+    if destination is not None:
         copy(target, destination)
-    
-    target.write_bytes(b'')
+    else:
+        logging.info("no copy")
+
+    target.write_bytes(b"")
     logging.info(f'"{target}" purged')
 
     sys.exit(0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = parse_args()
     setup_logger(verbosity=args.verbose)
 
@@ -256,7 +237,5 @@ if __name__ == '__main__':
         size=args.size,
         unit=args.unit,
         nocopy=args.nocopy,
-        output=args.output
+        output=args.output,
     )
-
-
