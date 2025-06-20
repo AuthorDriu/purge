@@ -31,7 +31,7 @@ class MultilineFormatter(logging.Formatter):
         if '\n' in message:
             # Добавляем отступ для всех строк после первой
             header, *lines = message.splitlines()
-            formatted_lines = [header] + [f'{" " * 30} | {line}' for line in lines]
+            formatted_lines = [header] + [f'| {line}' for line in lines]
             return '\n'.join(formatted_lines)
         return message
 
@@ -41,7 +41,7 @@ def setup_logger(
         logfiles: list[pathlib.Path],
         handlers: list[logging.Handler],
         
-        format:   str  = "%(message)s",
+        format:   str  = "[%(asctime)s] %(message)s",
         nostderr: bool = False,
 ) -> None:
     """setup_logger()
