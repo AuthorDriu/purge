@@ -1,3 +1,4 @@
 util
 *log
 *__pycache__
+.archive
