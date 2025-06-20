@@ -29,11 +29,13 @@
 Если одновременно указаны флаги -n и -o копирование произойдет в указанный файл.
 """
 
+import tempfile
 import argparse
 import pathlib
 import logging
 import shutil
 import sys
+import os
 
 
 TARGET_FILE_NOT_FOUND = 1
@@ -111,6 +113,31 @@ def ask_rewrite_or_rename(destination: pathlib.Path) -> pathlib.Path | None:
 
     return ofile
 
+
+def atomic_copy(source: pathlib.Path, destination: pathlib.Path) -> None:
+    """atomic_copy()
+    Реализует атомарное копирование файла в 
+    """
+
+    with tempfile.NamedTemporaryFile(
+        dir=source.parent, # Создаём временный файл в том же томе, где находится исходный файл
+        suffix='.tmp',
+        delete=False,
+        mode='wb'
+    ) as temp_file:
+        # Записываем во временный файл все данные из исходного файла
+        shutil.copyfile(source, temp_file.name)
+        shutil.copymode(source, temp_file.name)
+
+        try:
+            os.replace(temp_file.name, destination)
+
+        except Exception as e:
+            logging.error(f'cannot copy file: {e}')
+            if os.path.exists(temp_file.name):
+                os.unlink(temp_file.name)
+            raise e
+        
 
 def copy(target: pathlib.Path, destination: pathlib.Path) -> None:
     """copy_to()
